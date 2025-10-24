@@ -14,7 +14,7 @@ raw_path = Path("C:/Github/tft-ai-agent-mastra/src/services/python/modules/mic_r
 recorder = MicRecorder()
 recorder.set_device(mic_name)
 recorder.start_recording()
-time.sleep(10)  # pauses for 10 seconds
+time.sleep(20)  # pauses for 20 seconds
 audio_data = recorder.stop_recording()
 recorder.save_to_wav(output_path, audio_data)
 raw_path.write_bytes(audio_data)

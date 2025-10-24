@@ -64,16 +64,21 @@ class TestMicRecorder(unittest.TestCase):
         """Test successful start of recording."""
         recorder = MicRecorder()
         recorder.start_recording()
-        self.mock_pyaudio_instance.open.assert_called_once_with(
-            format=recorder.format,
-            channels=recorder.channels,
-            rate=recorder.rate,
-            input=True,
-            input_device_index=recorder.device_index,
-            frames_per_buffer=recorder.chunk,
-            stream_callback=None  # Non-callback mode
-        )
-        self.mock_stream.start_stream.assert_called_once()
+        # Verify open was called once
+        self.mock_pyaudio_instance.open.assert_called_once()
+        # Get the actual call arguments
+        call_args = self.mock_pyaudio_instance.open.call_args
+        # Verify all parameters except stream_callback
+        self.assertEqual(call_args.kwargs['format'], recorder.format)
+        self.assertEqual(call_args.kwargs['channels'], recorder.channels)
+        self.assertEqual(call_args.kwargs['rate'], recorder.rate)
+        self.assertEqual(call_args.kwargs['input'], True)
+        self.assertEqual(call_args.kwargs['input_device_index'], recorder.device_index)
+        self.assertEqual(call_args.kwargs['frames_per_buffer'], recorder.chunk)
+        # Verify stream_callback is a callable (implementation always uses callback mode)
+        self.assertTrue(callable(call_args.kwargs['stream_callback']))
+        # Stream doesn't need to be started explicitly in callback mode
+        self.mock_stream.start_stream.assert_not_called()
         self.assertTrue(recorder.is_recording)
         self.assertEqual(recorder.frames, deque())
 
