@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+
+FROM python:3.10-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PORT=8000 \
+    PYTHONPATH=/app
+
+WORKDIR /app
+
+# System deps (ffmpeg for audio decoding) and uv installer prereqs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install uv (faster package manager) and use system site-packages
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Install Python deps
+COPY src/services/python/docker/requirements.txt /tmp/requirements.txt
+RUN uv pip install --system -r /tmp/requirements.txt
+
+# App source (copy only what we need; build from repo root as context)
+COPY src /app/src
+
+EXPOSE ${PORT}
+
+CMD ["uvicorn", "src.services.python.apps.stt_api:app", "--host", "0.0.0.0", "--port", "8000"]

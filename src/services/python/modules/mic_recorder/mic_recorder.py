@@ -14,6 +14,7 @@ import threading
 from typing import Optional, Callable
 import logging
 from collections import deque
+import io
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -169,16 +170,29 @@ class MicRecorder:
             audio_data = b"".join(self.frames) if self.frames else b""
         return audio_data
 
-    def save_to_wav(self, filename: str, audio_data: Optional[bytes] = None):
-        """Save recorded audio to a WAV file."""
+    def save_to_wav(self, filename: Optional[str] = None, audio_data: Optional[bytes] = None) -> Optional[bytes]:
+        """Save recorded audio to a WAV file or return WAV bytes if no filename."""
         with self._frames_lock:
             data = audio_data or b"".join(self.frames)
-        with wave.open(filename, "wb") as wf:
-            wf.setnchannels(self.channels)
-            wf.setsampwidth(self.audio.get_sample_size(self.format))
-            wf.setframerate(self.rate)
-            wf.writeframes(data)
-        logger.info(f"Audio saved to {filename}")
+
+        if filename:
+            with wave.open(filename, "wb") as wf:
+                wf.setnchannels(self.channels)
+                wf.setsampwidth(self.audio.get_sample_size(self.format))
+                wf.setframerate(self.rate)
+                wf.writeframes(data)
+            logger.info(f"Audio saved to {filename}")
+            return None
+        else:
+            buffer = io.BytesIO()
+            with wave.open(buffer, "wb") as wf:
+                wf.setnchannels(self.channels)
+                wf.setsampwidth(self.audio.get_sample_size(self.format))
+                wf.setframerate(self.rate)
+                wf.writeframes(data)
+            wav_bytes = buffer.getvalue()
+            logger.info("WAV data generated in memory")
+            return wav_bytes
 
     def record_for_duration(self, duration_sec: float, filename: Optional[str] = None) -> bytes:
         """Convenience method to record for a fixed duration."""

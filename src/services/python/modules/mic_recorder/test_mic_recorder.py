@@ -118,6 +118,37 @@ class TestMicRecorder(unittest.TestCase):
         mock_wf.setframerate.assert_called_once_with(44100)
         mock_wf.writeframes.assert_called_once_with(audio_data)
 
+    @patch('modules.mic_recorder.mic_recorder.io.BytesIO')
+    @patch('modules.mic_recorder.mic_recorder.wave')
+    def test_save_to_wav_bytes(self, mock_wave, mock_bytesio):
+        """Test returning WAV bytes when no filename is provided."""
+        mock_buffer = MagicMock()
+        mock_bytesio.return_value = mock_buffer
+        mock_buffer.getvalue.return_value = b'fake_wav_data'
+
+        mock_wf = MagicMock()
+        mock_wave.open.return_value.__enter__.return_value = mock_wf
+
+        recorder = MicRecorder()
+        self.mock_pyaudio_instance.get_sample_size.return_value = 2
+        audio_data = b'raw_audio_data'
+
+        result = recorder.save_to_wav(audio_data=audio_data)
+
+        mock_bytesio.assert_called_once()
+        mock_wave.open.assert_called_once()
+        # Verify wave.open was called with the BytesIO buffer
+        call_args = mock_wave.open.call_args
+        self.assertEqual(call_args[0][0], mock_buffer)
+        self.assertEqual(call_args[0][1], "wb")
+
+        mock_wf.setnchannels.assert_called_once_with(1)
+        mock_wf.setsampwidth.assert_called_once()
+        mock_wf.setframerate.assert_called_once_with(44100)
+        mock_wf.writeframes.assert_called_once_with(audio_data)
+        mock_buffer.getvalue.assert_called_once()
+        self.assertEqual(result, b'fake_wav_data')
+
     @patch('modules.mic_recorder.mic_recorder.wave')
     @patch('time.sleep')
     def test_record_for_duration(self, mock_sleep, mock_wave):
